@@ -52,10 +52,6 @@ internal class Program
                 services.AddSingleton<CommandLineBuilder>();
                 services.AddCLIVerbs();
 
- 
-
-                
-                services.AddSingleton<IUserInterventionHandler, UserInterventionHandler>();
             }).Build();
 
         var service = host.Services.GetService<CommandLineBuilder>();
