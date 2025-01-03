@@ -16,6 +16,7 @@ using Wabbajack.Common;
 using Wabbajack.DTOs.Directives;
 using Wabbajack.DTOs.JsonConverters;
 using Wabbajack.Installer;
+using Wabbajack.Installer.Utilities;
 using Wabbajack.Paths;
 using Wabbajack.Paths.IO;
 
@@ -50,7 +51,7 @@ public class ModlistReport
     {
 
         _logger.LogInformation("Loading modlist...");
-        var modlist = await StandardInstaller.LoadFromFile(_dtos, input);
+        var modlist = await ModListLoading.LoadFromFile(_dtos, input);
 
         Dictionary<string, long> patchSizes;
         using (var zip = new ZipArchive(input.Open(FileMode.Open, FileAccess.Read, FileShare.Read)))

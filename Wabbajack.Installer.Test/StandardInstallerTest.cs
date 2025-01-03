@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
 using Wabbajack.DTOs.JsonConverters;
+using Wabbajack.Installer.Utilities;
 using Wabbajack.Paths;
 using Wabbajack.Paths.IO;
 using Xunit;
@@ -27,14 +28,14 @@ public class StandardInstallerTest
     [Fact]
     public async Task CanLoadModlistDefinition()
     {
-        var modlist = await StandardInstaller.LoadFromFile(_serializer, _modList);
+        var modlist = await ModListLoading.LoadFromFile(_serializer, _modList);
         Assert.Equal("MO2AndSKSETest", modlist.Name);
     }
 
     [Fact]
     public async Task CanInstallAList()
     {
-        var modlist = await StandardInstaller.LoadFromFile(_serializer, _modList);
+        var modlist = await ModListLoading.LoadFromFile(_serializer, _modList);
         using var scope = _provider.CreateScope();
         var config = _provider.GetService<InstallerConfiguration>()!;
         await using var installFolder = _manager.CreateFolder();

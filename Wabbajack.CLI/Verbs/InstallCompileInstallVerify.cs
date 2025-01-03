@@ -16,6 +16,8 @@ using Wabbajack.Downloaders.GameFile;
 using Wabbajack.DTOs;
 using Wabbajack.DTOs.JsonConverters;
 using Wabbajack.Installer;
+using Wabbajack.Installer.Factories;
+using Wabbajack.Installer.Utilities;
 using Wabbajack.Networking.WabbajackClientApi;
 using Wabbajack.Paths;
 using Wabbajack.Paths.IO;
@@ -34,9 +36,10 @@ public class InstallCompileInstallVerify
     private readonly FileHashCache _cache;
     private readonly GameLocator _gameLocator;
     private readonly CompilerSettingsInferencer _inferencer;
+    private readonly IInstallerFactory _installerFactory;
 
-    public InstallCompileInstallVerify(ILogger<InstallCompileInstallVerify> logger, Client wjClient, DownloadDispatcher dispatcher, DTOSerializer dtos, 
-        FileHashCache cache, GameLocator gameLocator, IServiceProvider serviceProvider, CompilerSettingsInferencer inferencer)
+    public InstallCompileInstallVerify(ILogger<InstallCompileInstallVerify> logger, Client wjClient, DownloadDispatcher dispatcher, DTOSerializer dtos,
+        FileHashCache cache, GameLocator gameLocator, IServiceProvider serviceProvider, CompilerSettingsInferencer inferencer, IInstallerFactory installerFactory)
     {
         _logger = logger;
         _wjClient = wjClient;
@@ -46,6 +49,7 @@ public class InstallCompileInstallVerify
         _cache = cache;
         _gameLocator = gameLocator;
         _inferencer = inferencer;
+        _installerFactory = installerFactory;
     }
 
     public static VerbDefinition Definition = new("install-compile-install-verify",
@@ -67,9 +71,9 @@ public class InstallCompileInstallVerify
 
             var installPath = outputs.Combine(machineUrl);
             
-            var modlist = await StandardInstaller.LoadFromFile(_dtos, wabbajackPath);
+            var modlist = await ModListLoading.LoadFromFile(_dtos, wabbajackPath);
 
-            var installer = StandardInstaller.Create(_serviceProvider, new InstallerConfiguration
+            var installerConfiguration = new InstallerConfiguration
             {
                 Downloads = downloads,
                 Install = installPath,
@@ -77,7 +81,9 @@ public class InstallCompileInstallVerify
                 Game = modlist.GameType,
                 ModlistArchive = wabbajackPath,
                 GameFolder = _gameLocator.GameLocation(modlist.GameType)
-            });
+            };
+
+            var installer = _installerFactory.Create(installerConfiguration);
 
             var result = await installer.Begin(token);
             if (!result)
@@ -106,13 +112,13 @@ public class InstallCompileInstallVerify
             
             var installPath2 = outputs.Combine("verify_list");
 
-            var comparison = await StandardInstaller.LoadFromFile(_dtos, wabbajackPath);
+            var comparison = await ModListLoading.LoadFromFile(_dtos, wabbajackPath);
             
-            var modlist2 = await StandardInstaller.LoadFromFile(_dtos, inferredSettings.OutputFile);
+            var modlist2 = await ModListLoading.LoadFromFile(_dtos, inferredSettings.OutputFile);
             if (CompareModlists(comparison, modlist2))
                 return 3;
 
-            var installer2 = StandardInstaller.Create(_serviceProvider, new InstallerConfiguration
+            var installerConfiguration2 = new InstallerConfiguration
             {
                 Downloads = downloads,
                 Install = installPath2,
@@ -120,7 +126,9 @@ public class InstallCompileInstallVerify
                 Game = modlist2.GameType,
                 ModlistArchive = inferredSettings.OutputFile,
                 GameFolder = _gameLocator.GameLocation(modlist2.GameType)
-            });
+            };
+
+            var installer2 = _installerFactory.Create(installerConfiguration2);
 
             result = await installer2.Begin(token);
             if (!result)

@@ -207,6 +207,7 @@ public static class ServiceExtensions
         service.AddScoped<CompilerSettings>();
         service.AddScoped<MO2Compiler>();
         service.AddSingleton<CompilerSettingsInferencer>();
+        service.AddInstaller();
 
         // Application Info
         var version =

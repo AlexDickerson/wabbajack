@@ -29,6 +29,7 @@ using Wabbajack.DTOs.ModListValidation;
 using Wabbajack.DTOs.ServerResponses;
 using Wabbajack.Hashing.xxHash64;
 using Wabbajack.Installer;
+using Wabbajack.Installer.Utilities;
 using Wabbajack.Networking.Discord;
 using Wabbajack.Networking.GitHub;
 using Wabbajack.Paths;
@@ -139,7 +140,7 @@ public class ValidateLists
             {
                 _logger.LogInformation("Loading Modlist");
                 modListData =
-                    await StandardInstaller.Load(_dtos, _dispatcher, modList, token);
+                    await ModListLoading.Load(_dtos, _dispatcher, modList, token);
                 // Clear out the directives to save memory
                 modListData.Directives = Array.Empty<Directive>();
                 GC.Collect();
@@ -604,7 +605,7 @@ public class ValidateLists
     {
         var modlistMetadata = (await _wjClient.LoadLists())
             .First(l => l.NamespacedName == validatedModList.MachineURL);
-        var modList = await StandardInstaller.Load(_dtos, _dispatcher, modlistMetadata, token);
+        var modList = await ModListLoading.Load(_dtos, _dispatcher, modlistMetadata, token);
         await SendDefinitionToLoadOrderLibrary(modlistMetadata, modList, token);
 
     }

@@ -12,6 +12,8 @@ using Wabbajack.Downloaders.GameFile;
 using Wabbajack.DTOs;
 using Wabbajack.DTOs.JsonConverters;
 using Wabbajack.Installer;
+using Wabbajack.Installer.Factories;
+using Wabbajack.Installer.Utilities;
 using Wabbajack.Networking.WabbajackClientApi;
 using Wabbajack.Paths;
 using Wabbajack.Paths.IO;
@@ -28,9 +30,10 @@ public class Install
     private readonly DTOSerializer _dtos;
     private readonly FileHashCache _cache;
     private readonly GameLocator _gameLocator;
+    private readonly IInstallerFactory _installerFactory;
 
     public Install(ILogger<Install> logger, Client wjClient, DownloadDispatcher dispatcher, DTOSerializer dtos, 
-        FileHashCache cache, GameLocator gameLocator, IServiceProvider serviceProvider)
+        FileHashCache cache, GameLocator gameLocator, IServiceProvider serviceProvider, IInstallerFactory installerFactory)
     {
         _logger = logger;
         _wjClient = wjClient;
@@ -39,6 +42,7 @@ public class Install
         _serviceProvider = serviceProvider;
         _cache = cache;
         _gameLocator = gameLocator;
+        _installerFactory = installerFactory;
     }
 
     public static VerbDefinition Definition = new VerbDefinition("install", "Installs a wabbajack file", new[]
@@ -57,9 +61,9 @@ public class Install
                 return 1;
         }
 
-        var modlist = await StandardInstaller.LoadFromFile(_dtos, wabbajack);
+        var modlist = await ModListLoading.LoadFromFile(_dtos, wabbajack);
 
-        var installer = StandardInstaller.Create(_serviceProvider, new InstallerConfiguration
+        var installerConfiguration = new InstallerConfiguration
         {
             Downloads = downloads,
             Install = output,
@@ -67,7 +71,9 @@ public class Install
             Game = modlist.GameType,
             ModlistArchive = wabbajack,
             GameFolder = _gameLocator.GameLocation(modlist.GameType)
-        });
+        };
+
+        var installer = _installerFactory.Create(installerConfiguration);
 
         var result = await installer.Begin(token);
 

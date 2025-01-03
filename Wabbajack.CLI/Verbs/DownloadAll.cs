@@ -13,6 +13,7 @@ using Wabbajack.DTOs;
 using Wabbajack.DTOs.DownloadStates;
 using Wabbajack.DTOs.JsonConverters;
 using Wabbajack.Installer;
+using Wabbajack.Installer.Utilities;
 using Wabbajack.Networking.WabbajackClientApi;
 using Wabbajack.Paths;
 using Wabbajack.Paths.IO;
@@ -70,7 +71,7 @@ public class DownloadAll
                 {
                     try
                     {
-                        return await StandardInstaller.Load(_dtos, _dispatcher, lists.First(l => l.NamespacedName == m.MachineURL), token);
+                        return await ModListLoading.Load(_dtos, _dispatcher, lists.First(l => l.NamespacedName == m.MachineURL), token);
                     }
                     catch (Exception ex)
                     {

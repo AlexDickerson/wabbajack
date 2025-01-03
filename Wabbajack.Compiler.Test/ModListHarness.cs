@@ -10,6 +10,7 @@ using Wabbajack.Downloaders;
 using Wabbajack.DTOs;
 using Wabbajack.DTOs.JsonConverters;
 using Wabbajack.Installer;
+using Wabbajack.Installer.Utilities;
 using Wabbajack.Paths;
 using Wabbajack.Paths.IO;
 using Xunit;
@@ -100,7 +101,7 @@ public class ModListHarness
         if (!await compiler!.Begin(CancellationToken.None))
             return null;
 
-        var modlist = await StandardInstaller.LoadFromFile(_dtos, settings.OutputFile);
+        var modlist = await ModListLoading.LoadFromFile(_dtos, settings.OutputFile);
         return modlist;
     }
 
@@ -112,7 +113,7 @@ public class ModListHarness
 
         settings.Install = _installLocation;
         settings.Downloads = _installDownloads;
-        settings.ModList = await StandardInstaller.LoadFromFile(_dtos, _outputFile);
+        settings.ModList = await ModListLoading.LoadFromFile(_dtos, _outputFile);
         settings.ModlistArchive = _outputFile;
         settings.Game = Game.SkyrimSpecialEdition;
         settings.GameFolder = _gameFolder;

@@ -14,6 +14,7 @@ using Wabbajack.DTOs.Directives;
 using Wabbajack.DTOs.JsonConverters;
 using Wabbajack.Hashing.xxHash64;
 using Wabbajack.Installer;
+using Wabbajack.Installer.Utilities;
 using Wabbajack.Paths;
 using Wabbajack.Paths.IO;
 using Wabbajack.RateLimiter;
@@ -50,7 +51,7 @@ public class VerifyModlistInstall
     public async Task<int> Run(AbsolutePath modlistLocation, AbsolutePath installFolder, CancellationToken token)
     {
         _logger.LogInformation("Loading modlist {ModList}", modlistLocation);
-        var list = await StandardInstaller.LoadFromFile(_dtos, modlistLocation);
+        var list = await ModListLoading.LoadFromFile(_dtos, modlistLocation);
         
         _logger.LogInformation("Indexing files");
         var byTo = list.Directives.ToDictionary(d => d.To);

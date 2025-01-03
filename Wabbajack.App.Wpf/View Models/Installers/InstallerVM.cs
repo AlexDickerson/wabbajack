@@ -38,6 +38,9 @@ using System.Windows.Forms;
 using Microsoft.Extensions.DependencyInjection;
 using Wabbajack.CLI.Verbs;
 using Wabbajack.VFS;
+using System.IO.Compression;
+using Wabbajack.Installer.Utilities;
+using Wabbajack.Installer.Factories;
 
 namespace Wabbajack;
 
@@ -124,6 +127,8 @@ public class InstallerVM : BackNavigatingVM, IBackNavigatingVM, ICpuStatusVM
     private readonly DownloadDispatcher _downloadDispatcher;
     private readonly IEnumerable<INeedsLogin> _logins;
     private readonly CancellationToken _cancellationToken;
+    private readonly IInstallerFactory _installerFactory;
+
     public ReadOnlyObservableCollection<CPUDisplayVM> StatusList => _resourceMonitor.Tasks;
 
     [Reactive]
@@ -159,7 +164,7 @@ public class InstallerVM : BackNavigatingVM, IBackNavigatingVM, ICpuStatusVM
     public InstallerVM(ILogger<InstallerVM> logger, DTOSerializer dtos, SettingsManager settingsManager, IServiceProvider serviceProvider,
         SystemParametersConstructor parametersConstructor, IGameLocator gameLocator, LogStream loggerProvider, ResourceMonitor resourceMonitor,
         Wabbajack.Services.OSIntegrated.Configuration configuration, HttpClient client, DownloadDispatcher dispatcher, IEnumerable<INeedsLogin> logins,
-        CancellationToken cancellationToken) : base(logger)
+        CancellationToken cancellationToken, IInstallerFactory installerFactory) : base(logger)
     {
         _logger = logger;
         _configuration = configuration;
@@ -174,6 +179,7 @@ public class InstallerVM : BackNavigatingVM, IBackNavigatingVM, ICpuStatusVM
         _downloadDispatcher = dispatcher;
         _logins = logins;
         _cancellationToken = cancellationToken;
+        _installerFactory = installerFactory;
 
         Installer = new MO2InstallerVM(this);
         
@@ -407,8 +413,8 @@ public class InstallerVM : BackNavigatingVM, IBackNavigatingVM, ICpuStatusVM
         ModListLocation.TargetPath = path;
         try
         {
-            ModList = await StandardInstaller.LoadFromFile(_dtos, path);
-            ModListImage = BitmapFrame.Create(await StandardInstaller.ModListImageStream(path));
+            ModList = await ModListLoading.LoadFromFile(_dtos, path);
+            ModListImage = BitmapFrame.Create(await ModListImageStream(path));
             
             if (!string.IsNullOrWhiteSpace(ModList.Readme)) 
                 UIUtils.OpenWebsite(new Uri(ModList.Readme));
@@ -453,6 +459,16 @@ public class InstallerVM : BackNavigatingVM, IBackNavigatingVM, ICpuStatusVM
             _logger.LogError(ex, "While loading modlist");
             ll.Fail();
         }
+    }
+
+    public static async Task<Stream> ModListImageStream(AbsolutePath path)
+    {
+        await using var fs = path.Open(FileMode.Open, FileAccess.Read, FileShare.Read);
+        using var ar = new ZipArchive(fs, ZipArchiveMode.Read);
+        var entry = ar.GetEntry("modlist-image.png");
+        if (entry == null)
+            throw new InvalidDataException("No modlist image found");
+        return new MemoryStream(await entry.Open().ReadAllAsync());
     }
 
     private void ConfirmOverwrite()
@@ -541,17 +557,18 @@ public class InstallerVM : BackNavigatingVM, IBackNavigatingVM, ICpuStatusVM
 
             try
             {
-                var installer = StandardInstaller.Create(_serviceProvider, new InstallerConfiguration
+                var installerConfiguration = new InstallerConfiguration
                 {
-                    Game = ModList.GameType,
                     Downloads = Installer.DownloadLocation.TargetPath,
                     Install = Installer.Location.TargetPath,
                     ModList = ModList,
+                    Game = ModList.GameType,
                     ModlistArchive = ModListLocation.TargetPath,
                     SystemParameters = _parametersConstructor.Create(),
                     GameFolder = _gameLocator.GameLocation(ModList.GameType)
-                });
+                };
 
+                var installer = _installerFactory.Create(installerConfiguration);
 
                 installer.OnStatusUpdate = update =>
                 {

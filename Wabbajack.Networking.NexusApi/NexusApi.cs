@@ -34,6 +34,7 @@ public class NexusApi
     private DateTime _lastValidated;
     private (ValidateInfo info, ResponseMetadata header) _lastValidatedInfo; 
     private AsyncLock _authLock = new();
+    private readonly AsyncLock _authValidationLock = new();
 
     public NexusApi(ITokenProvider<NexusOAuthState> authInfo, ILogger<NexusApi> logger, HttpClient client,
         IResource<HttpClient> limiter, ApplicationInfo appInfo, JsonSerializerOptions jsonOptions)
@@ -53,12 +54,14 @@ public class NexusApi
     {
         var (isApi, code) = await GetAuthInfo();
 
+        using var _ = await _authValidationLock.WaitAsync();
+
         if (isApi)
         {
             var msg = await GenerateMessage(HttpMethod.Get, Endpoints.Validate);
             _lastValidatedInfo = await Send<ValidateInfo>(msg, token);
         }
-        else
+        else if (_lastValidated < DateTime.Now - TimeSpan.FromMinutes(5)) // We don't want to spam the validate endpoint when starting a modlist download
         {
             var msg = await GenerateMessage(HttpMethod.Get, Endpoints.OAuthValidate);
             var (data, header) = await Send<OAuthUserInfo>(msg, token);
@@ -68,12 +71,13 @@ public class NexusApi
                 Name = data.Name,
             };
             _lastValidatedInfo = (validateInfo, header);
+
+            _lastValidated = DateTime.Now;
         }
 
-        _lastValidated = DateTime.Now;
         return _lastValidatedInfo;
     }
-    
+
     public async Task<(ValidateInfo info, ResponseMetadata header)> ValidateCached(
         CancellationToken token = default)
     {

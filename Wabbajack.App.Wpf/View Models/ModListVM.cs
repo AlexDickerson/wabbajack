@@ -16,6 +16,7 @@ using Wabbajack;
 using Wabbajack.Paths;
 using Wabbajack.Paths.IO;
 using Consts = Wabbajack.Consts;
+using Wabbajack.Installer.Utilities;
 
 namespace Wabbajack
 {
@@ -54,7 +55,7 @@ namespace Wabbajack
             {
                 try
                 {
-                    SourceModList = await StandardInstaller.LoadFromFile(_dtos, modListPath);
+                    SourceModList = await ModListLoading.LoadFromFile(_dtos, modListPath);
                     var metadataPath = modListPath.WithExtension(Ext.ModlistMetadataExtension);
                     if (metadataPath.FileExists())
                     {
